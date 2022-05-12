@@ -162,6 +162,9 @@ class BasicPowerSGD(Aggregator):
                 approximation=torch.zeros(
                     size=(len(matrices), *shape), device=self.device, dtype=self.dtype
                 ),
+                iter_approximation_buffer=torch.empty(
+                    size=(len(matrices), *shape), device=self.device, dtype=self.dtype
+                ),
             )
             for shape, matrices in list(gradients_per_shape.items())
         ]
@@ -200,9 +203,10 @@ class BasicPowerSGD(Aggregator):
                 torch.bmm(
                     in_batch, 
                     out_batch.permute([0, 2, 1]), 
-                    out=maybe_transpose(group["approximation"])
+                    out=maybe_transpose(group["iter_approximation_buffer"])
                 )
-                group["grad_batch"].sub_(group["approximation"])  # error feedback
+                group["grad_batch"].sub_(group["iter_approximation_buffer"])  # error feedback
+                group["approximation"].add_(group["iter_approximation_buffer"])
 
         # Un-batch the approximation and error feedback, write to the output
         for group in shape_groups:
